@@ -1,4 +1,5 @@
 import os
+import requests
 
 from flask import abort, Flask, redirect, render_template, request
 from flask.views import View
@@ -16,9 +17,6 @@ from wtforms.validators import DataRequired
 
 import ory_hydra_client
 from ory_hydra_client.rest import ApiException
-
-
-configuration = ory_hydra_client.Configuration(host="http://localhost:4445")
 
 
 class DataRequiredIf(DataRequired):
@@ -88,7 +86,13 @@ class LoginView(View):
     def post(self, login_request, form, hydra):
         if form.validate():
             if form.login.data:
-                if form.user.data == "foo@bar.com" and form.password.data == "password":
+                login_body = {
+                    "emailaddress": form.user.data,
+                    "password": form.password.data
+                }
+                auth_response = requests.post(url="http://localhost:8000/dapi/user/login/", data=login_body)
+
+                if auth_response.ok:
                     subject = form.user.data
                     remember = form.remember.data
                     body = ory_hydra_client.AcceptLoginRequest(
@@ -176,9 +180,11 @@ class ConsentView(View):
                     session=session,
                     remember=form.remember.data,
                 )
+
                 response = hydra.accept_consent_request(
                     consent_request.challenge, body=body
                 )
+
             else:
                 body = ory_hydra_client.RejectRequest(error="user_decline")
                 response = hydra.reject_consent_request(
@@ -194,6 +200,14 @@ class ConsentView(View):
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
 csrf = CSRFProtect(app)
+app.config.from_object("config.Config")
+
+HYDRA_URL = app.config['HYDRA_URL']
+RESTAPI_URL = app.config['RESTAPI_URL']
+
+configuration = ory_hydra_client.Configuration(host=HYDRA_URL)
 
 app.add_url_rule("/login", view_func=LoginView.as_view("login"))
 app.add_url_rule("/consent", view_func=ConsentView.as_view("consent"))
+
+app.run(debug=True, host='0.0.0.0', port=3000)
