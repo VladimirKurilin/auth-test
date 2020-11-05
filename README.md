@@ -1,49 +1,44 @@
-Hydra login/consent provider - Python
+Dummy auth project
 ======================================
 
-This is an example implementation for the User Login and Consent flow of 
-[ORY Hydra](https://www.ory.sh/docs/hydra/) version 1.7.x in Python.
+This is a mock implementation for oauth server using the User Login and Consent flow of [ory/hydra](https://www.ory.sh/docs/hydra/).
 
-**Requirements: Python >= 3.7**
+2 scope types are implemented:
+- `openid` for an JWT ID token (username, email, sex and personal_info)
+- `offline` for a refresh token
 
-This example is using the official
-[ory-hydra-client](https://github.com/ory/sdk/tree/master/clients/hydra/python) Python library.
+
+You can log in as any of the 10 predefined users:
+
+| username   | email            | sex    |   password | very_useful_info       |
+|:-----------|:-----------------|:-------|-----------:|:-----------------------|
+| John       | john@kek.com     | male   |        123 | Hates cats             |
+| Emily      | emily@kek.com    | female |        456 | Loves cats             |
+| Jessica    | jessica@kek.com  | female |        789 |                        |
+| Leonardo   | leonardo@kek.com | male   |        012 | Just a potato          |
+| Alfred     | alfred@kek.com   | male   |        345 |                        |
+| Juan       | juan@kek.com     | male   |        678 |                        |
+| Sarah      | sarah@kek.com    | female |        901 |                        |
+| Tony       | tony@kek.com     | male   |        234 | Stark. Mr Stark Junior |
+| Megan      | megan@kek.com    |        |        567 | Modern society         |
+| Robin      | robin@kek.com    | male   |        890 | Nolan forever!!        |
+
 
 Running locally
 ---------------
 
-Use the official Hydra Container image:
-
-```shell
-docker run \
-    -it \
-    --rm \
-    --network="host" \
-    -e "DSN=memory" \
-    -e "URLS_SELF_ISSUER=http://127.0.0.1:4444/" \
-    -e "URLS_CONSENT=http://127.0.0.1:5000/consent" \
-    -e "URLS_LOGIN=http://127.0.0.1:5000/login" \
-    -e "LOG_LEAK_SENSITIVE_VALUES=true" \
-    --name hydra \
-    -p 4445:4445 \
-    -p 4444:4444 \
-    oryd/hydra:v1.7 \
-    serve all --dangerous-force-http
+Start dev environment with Docker:
+```shell script
+docker-compose up
 ```
-
-Afterwards you can install the dependencies and run the example application:
-
-
-```shell
-$ pip install -r requirements.txt
-$ flask run
-```
+Excellent! You a ready to go.
 
 
-## Testing an example flow
+To check that everything works, you can run the example:
 
-```sh
-docker exec hydra \
+I. Register client application with id `auth-code-client` and secret `secret`.  If you need to create another client, you can regiser it in the same way ([full cli description here](https://www.ory.sh/hydra/docs/cli/hydra))
+```shell script
+docker-compose exec hydra \
     hydra clients create \
     --endpoint http://127.0.0.1:4445 \
     --id auth-code-client \
@@ -54,17 +49,13 @@ docker exec hydra \
     --callbacks http://127.0.0.1:5555/callback
 ```
 
-```sh
-docker exec hydra \
+II. Start an example web application with Authorization Code Flow
+```shell script
+docker-compose exec hydra \
     hydra token user \
     --client-id auth-code-client \
     --client-secret secret \
     --endpoint http://127.0.0.1:4444/ \
     --port 5555 \
-    --scope openid,offline \
-    --audience auth-code-client
+    --scope openid,offline
 ```
-
-See also the instructions in the
-[5 minute tutorial](https://www.ory.sh/docs/hydra/5min-tutorial) for testing
-the various [OAuth 2.0 grant types](https://oauth.net/2/grant-types/).
